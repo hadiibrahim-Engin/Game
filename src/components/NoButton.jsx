@@ -2,9 +2,19 @@ import { useEffect, useRef } from 'react'
 import styles from './NoButton.module.css'
 
 const PAD = 16
-const MIN_FLEE_DIST = 240
-const MAX_FLEE_DIST = 420
-const FLEE_RATIO = 0.46
+const DANGER_DIST = 260
+const SPOTS = [
+  { x: 0.05, y: 0.08 },
+  { x: 0.82, y: 0.10 },
+  { x: 0.08, y: 0.38 },
+  { x: 0.84, y: 0.38 },
+  { x: 0.45, y: 0.05 },
+  { x: 0.08, y: 0.78 },
+  { x: 0.68, y: 0.78 },
+  { x: 0.36, y: 0.84 },
+  { x: 0.84, y: 0.64 },
+  { x: 0.46, y: 0.56 },
+]
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
@@ -12,6 +22,7 @@ function clamp(value, min, max) {
 
 export default function NoButton() {
   const btnRef = useRef(null)
+  const spotRef = useRef(0)
 
   useEffect(() => {
     const btn = btnRef.current
@@ -26,14 +37,6 @@ export default function NoButton() {
     btn.style.top      = init.top  + 'px'
     btn.style.zIndex   = '5'
 
-    function fleeDistance() {
-      return clamp(
-        Math.min(window.innerWidth, window.innerHeight) * FLEE_RATIO,
-        MIN_FLEE_DIST,
-        MAX_FLEE_DIST
-      )
-    }
-
     function safePos(x, y) {
       const bw = btn.offsetWidth
       const bh = btn.offsetHeight
@@ -44,6 +47,51 @@ export default function NoButton() {
         x: clamp(x, PAD, maxX),
         y: clamp(y, PAD, maxY),
       }
+    }
+
+    function spotPos(index) {
+      const bw = btn.offsetWidth
+      const bh = btn.offsetHeight
+      const spot = SPOTS[index % SPOTS.length]
+      const usableW = Math.max(0, window.innerWidth - bw - PAD * 2)
+      const usableH = Math.max(0, window.innerHeight - bh - PAD * 2)
+
+      return safePos(PAD + usableW * spot.x, PAD + usableH * spot.y)
+    }
+
+    function spotCenter(index) {
+      const pos = spotPos(index)
+      return {
+        x: pos.x + btn.offsetWidth / 2,
+        y: pos.y + btn.offsetHeight / 2,
+      }
+    }
+
+    function moveToSpot(index) {
+      const pos = spotPos(index)
+      btn.style.left = pos.x + 'px'
+      btn.style.top = pos.y + 'px'
+      window.setTimeout(clampIntoWindow, 90)
+    }
+
+    function clampIntoWindow() {
+      const r = btn.getBoundingClientRect()
+      const pos = safePos(r.left, r.top)
+      btn.style.left = pos.x + 'px'
+      btn.style.top = pos.y + 'px'
+    }
+
+    function moveToNextSpot(cursorX, cursorY) {
+      let next = (spotRef.current + 1) % SPOTS.length
+
+      for (let i = 0; i < SPOTS.length; i += 1) {
+        const center = spotCenter(next)
+        if (Math.hypot(center.x - cursorX, center.y - cursorY) > DANGER_DIST) break
+        next = (next + 1) % SPOTS.length
+      }
+
+      spotRef.current = next
+      moveToSpot(next)
     }
 
     function isNoHitZone(x, y) {
@@ -61,63 +109,11 @@ export default function NoButton() {
       const cx = r.left + r.width / 2
       const cy = r.top + r.height / 2
 
-      return isNoHitZone(x, y) || Math.hypot(x - cx, y - cy) < fleeDistance()
-    }
-
-    function fleeFrom(cursorX, cursorY) {
-      const r = btn.getBoundingClientRect()
-      const bw = btn.offsetWidth
-      const bh = btn.offsetHeight
-      const maxX = Math.max(PAD, window.innerWidth - bw - PAD)
-      const maxY = Math.max(PAD, window.innerHeight - bh - PAD)
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const dx = cx - cursorX
-      const dy = cy - cursorY
-      const angle = Math.atan2(dy || 1, dx || 1)
-      const leap = fleeDistance() * 1.35
-
-      const xMid = window.innerWidth / 2 - bw / 2
-      const yMid = window.innerHeight / 2 - bh / 2
-      const candidates = [
-        { x: PAD, y: PAD },
-        { x: xMid, y: PAD },
-        { x: maxX, y: PAD },
-        { x: PAD, y: yMid },
-        { x: maxX, y: yMid },
-        { x: PAD, y: maxY },
-        { x: xMid, y: maxY },
-        { x: maxX, y: maxY },
-        {
-          x: r.left + Math.cos(angle) * leap,
-          y: r.top + Math.sin(angle) * leap,
-        },
-        {
-          x: r.left + Math.cos(angle + 0.55) * leap,
-          y: r.top + Math.sin(angle + 0.55) * leap,
-        },
-        {
-          x: r.left + Math.cos(angle - 0.55) * leap,
-          y: r.top + Math.sin(angle - 0.55) * leap,
-        },
-      ]
-
-      const pick = candidates.map(p => ({
-        ...safePos(p.x, p.y),
-      })).sort((a, b) => {
-        const bCursorDist = Math.hypot(b.x + bw / 2 - cursorX, b.y + bh / 2 - cursorY)
-        const aCursorDist = Math.hypot(a.x + bw / 2 - cursorX, a.y + bh / 2 - cursorY)
-        const bJumpDist = Math.hypot(b.x - r.left, b.y - r.top)
-        const aJumpDist = Math.hypot(a.x - r.left, a.y - r.top)
-        return bCursorDist + bJumpDist * 0.18 - (aCursorDist + aJumpDist * 0.18)
-      })[0]
-
-      btn.style.left = pick.x + 'px'
-      btn.style.top  = pick.y + 'px'
+      return isNoHitZone(x, y) || Math.hypot(x - cx, y - cy) < DANGER_DIST
     }
 
     function onPointerMove(e) {
-      if (isDangerClose(e.clientX, e.clientY)) fleeFrom(e.clientX, e.clientY)
+      if (isDangerClose(e.clientX, e.clientY)) moveToNextSpot(e.clientX, e.clientY)
     }
 
     function onTouch(e) {
@@ -125,7 +121,7 @@ export default function NoButton() {
       if (!t) return
       if (isDangerClose(t.clientX, t.clientY)) {
         e.preventDefault()
-        fleeFrom(t.clientX, t.clientY)
+        moveToNextSpot(t.clientX, t.clientY)
       }
     }
 
@@ -136,18 +132,15 @@ export default function NoButton() {
 
       e.preventDefault()
       e.stopPropagation()
-      fleeFrom(x, y)
+      moveToNextSpot(x, y)
     }
 
     function onResize() {
-      const r = btn.getBoundingClientRect()
-      const next = safePos(r.left, r.top)
-      btn.style.left = next.x + 'px'
-      btn.style.top = next.y + 'px'
+      moveToSpot(spotRef.current)
     }
 
+    moveToSpot(spotRef.current)
     document.addEventListener('pointermove', onPointerMove, { passive: true })
-    document.addEventListener('mousemove', onPointerMove, { passive: true })
     document.addEventListener('touchstart', onTouch, { passive: false, capture: true })
     document.addEventListener('touchmove', onTouch, { passive: false, capture: true })
     document.addEventListener('pointerdown', onBlock, true)
@@ -156,7 +149,6 @@ export default function NoButton() {
 
     return () => {
       document.removeEventListener('pointermove', onPointerMove)
-      document.removeEventListener('mousemove', onPointerMove)
       document.removeEventListener('touchstart', onTouch, true)
       document.removeEventListener('touchmove', onTouch, true)
       document.removeEventListener('pointerdown', onBlock, true)
