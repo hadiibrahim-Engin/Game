@@ -133,7 +133,7 @@
       background: #f3e8f0;
       color: var(--sub);
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-      transition: transform 0.3s cubic-bezier(.36,.07,.19,.97), box-shadow 0.15s ease;
+      transition: left 0.18s ease-out, top 0.18s ease-out, box-shadow 0.15s ease;
     }
 
     .btn-no:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
@@ -273,37 +273,59 @@
   /* ── No button always dodges (impossible to catch) ── */
   const noBtn = document.getElementById('btn-no');
 
-  function dodge() {
-    // jump to a random safe spot within the viewport
-    const pad = 12;
+  const pad = 12;
+  const SAFE_DIST = 130; // how close the cursor can get before it flees
+
+  function moveTo(x, y) {
     const bw = noBtn.offsetWidth;
     const bh = noBtn.offsetHeight;
     const maxX = window.innerWidth  - bw - pad;
     const maxY = window.innerHeight - bh - pad;
-    const x = pad + Math.random() * Math.max(0, maxX - pad);
-    const y = pad + Math.random() * Math.max(0, maxY - pad);
+    x = Math.max(pad, Math.min(x, maxX));
+    y = Math.max(pad, Math.min(y, maxY));
     noBtn.style.position = 'fixed';
     noBtn.style.left = x + 'px';
     noBtn.style.top  = y + 'px';
     noBtn.style.zIndex = 5;
   }
 
-  // Run away from mouse, touch, and any attempt to focus/click it.
-  ['mouseenter', 'mouseover', 'mousedown', 'touchstart', 'pointerdown', 'focus', 'click']
-    .forEach(evt => {
-      noBtn.addEventListener(evt, (e) => {
-        e.preventDefault();
-        dodge();
-      }, { passive: false });
-    });
+  // Flee in the direction away from the cursor.
+  function fleeFrom(px, py) {
+    const r = noBtn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    let dx = cx - px;
+    let dy = cy - py;
+    let len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const jump = 160 + Math.random() * 80;
+    let nx = cx + dx * jump - r.width / 2;
+    let ny = cy + dy * jump - r.height / 2;
+    // if pushed off-screen, pick a random safe spot instead
+    if (nx < pad || nx > window.innerWidth  - r.width  - pad ||
+        ny < pad || ny > window.innerHeight - r.height - pad) {
+      nx = pad + Math.random() * (window.innerWidth  - r.width  - 2 * pad);
+      ny = pad + Math.random() * (window.innerHeight - r.height - 2 * pad);
+    }
+    moveTo(nx, ny);
+  }
 
-  // Also flee when the cursor merely gets close (desktop).
+  // Move away the instant the cursor gets near.
   document.addEventListener('mousemove', (e) => {
     const r = noBtn.getBoundingClientRect();
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
-    if (dist < 90) dodge();
+    if (dist < SAFE_DIST) fleeFrom(e.clientX, e.clientY);
+  });
+
+  // Block any direct interaction (touch / click / focus) and dodge.
+  ['mousedown', 'touchstart', 'pointerdown', 'focus', 'click'].forEach(evt => {
+    noBtn.addEventListener(evt, (e) => {
+      e.preventDefault();
+      const r = noBtn.getBoundingClientRect();
+      fleeFrom(r.left + r.width / 2, r.top + r.height / 2 + 40);
+    }, { passive: false });
   });
 
   /* ── Yes ── */
