@@ -1,0 +1,38 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  transition: background 0.6s ease;
+  position: relative;
+  background: var(--bg);
+}
+
+.celebrate {
+  background: linear-gradient(135deg, #fff0f5, #fffbe6, #f0f5ff);
+  animation: bgShift 3s ease infinite alternate;
+  background-size: 200% 200%;
+}
+
+@keyframes bgShift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+  border-radius: 2rem;
+  padding: 2.5rem 2rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(255, 107, 157, 0.18);
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}

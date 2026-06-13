@@ -1,0 +1,17 @@
+.emoji {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.8rem;
+}
+
+.title {
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.msg {
+  font-size: 0.98rem;
+  color: var(--sub);
+  line-height: 1.6;
+}

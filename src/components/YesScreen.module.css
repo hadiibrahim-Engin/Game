@@ -1,0 +1,30 @@
+.canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.emoji {
+  font-size: 3.8rem;
+  display: block;
+  margin-bottom: 0.8rem;
+  animation: bounce 0.7s ease infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-12px); }
+}
+
+.title {
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.msg {
+  font-size: 1rem;
+  color: var(--sub);
+  line-height: 1.6;
+}

@@ -1,0 +1,16 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #fff5f8;
+  --card: #ffffff;
+  --accent: #ff6b9d;
+  --text: #3d2b3d;
+  --sub: #a07090;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  font-family: 'Georgia', serif;
+  overflow: hidden;
+}
