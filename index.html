@@ -276,38 +276,53 @@
   const pad = 12;
   const SAFE_DIST = 130; // how close the cursor can get before it flees
 
-  function moveTo(x, y) {
+  function clampedPos(x, y) {
     const bw = noBtn.offsetWidth;
     const bh = noBtn.offsetHeight;
-    const maxX = window.innerWidth  - bw - pad;
-    const maxY = window.innerHeight - bh - pad;
-    x = Math.max(pad, Math.min(x, maxX));
-    y = Math.max(pad, Math.min(y, maxY));
+    // always keep the full button inside the viewport
+    return {
+      x: Math.max(pad, Math.min(x, window.innerWidth  - bw - pad)),
+      y: Math.max(pad, Math.min(y, window.innerHeight - bh - pad)),
+    };
+  }
+
+  function moveTo(x, y) {
+    const p = clampedPos(x, y);
     noBtn.style.position = 'fixed';
-    noBtn.style.left = x + 'px';
-    noBtn.style.top  = y + 'px';
+    noBtn.style.left = p.x + 'px';
+    noBtn.style.top  = p.y + 'px';
     noBtn.style.zIndex = 5;
   }
 
-  // Flee in the direction away from the cursor.
+  // Flee away from the cursor, always staying fully on-screen.
   function fleeFrom(px, py) {
-    const r = noBtn.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
+    const r  = noBtn.getBoundingClientRect();
+    const cx = r.left + r.width  / 2;
+    const cy = r.top  + r.height / 2;
     let dx = cx - px;
     let dy = cy - py;
-    let len = Math.hypot(dx, dy) || 1;
+    const len = Math.hypot(dx, dy) || 1;
     dx /= len; dy /= len;
+
     const jump = 160 + Math.random() * 80;
-    let nx = cx + dx * jump - r.width / 2;
+    let nx = cx + dx * jump - r.width  / 2;
     let ny = cy + dy * jump - r.height / 2;
-    // if pushed off-screen, pick a random safe spot instead
-    if (nx < pad || nx > window.innerWidth  - r.width  - pad ||
-        ny < pad || ny > window.innerHeight - r.height - pad) {
-      nx = pad + Math.random() * (window.innerWidth  - r.width  - 2 * pad);
-      ny = pad + Math.random() * (window.innerHeight - r.height - 2 * pad);
+
+    // clamp first, then check if it would land too close; if so, pick
+    // the opposite corner area that is farthest from the cursor.
+    const p = clampedPos(nx, ny);
+    const bw = noBtn.offsetWidth;
+    const bh = noBtn.offsetHeight;
+
+    const distAfter = Math.hypot(p.x + bw / 2 - px, p.y + bh / 2 - py);
+    if (distAfter < 120) {
+      // send to the quadrant farthest from the cursor
+      const farX = px < window.innerWidth  / 2 ? window.innerWidth  - bw - pad : pad;
+      const farY = py < window.innerHeight / 2 ? window.innerHeight - bh - pad : pad;
+      p.x = farX;
+      p.y = farY;
     }
-    moveTo(nx, ny);
+    moveTo(p.x, p.y);
   }
 
   // Move away the instant the cursor gets near.
