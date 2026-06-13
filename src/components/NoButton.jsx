@@ -46,17 +46,22 @@ export default function NoButton() {
       }
     }
 
-    function isDangerClose(x, y) {
+    function isNoHitZone(x, y) {
       const r = btn.getBoundingClientRect()
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const inRect =
+      return (
         x >= r.left - PAD &&
         x <= r.right + PAD &&
         y >= r.top - PAD &&
         y <= r.bottom + PAD
+      )
+    }
 
-      return inRect || Math.hypot(x - cx, y - cy) < fleeDistance()
+    function isDangerClose(x, y) {
+      const r = btn.getBoundingClientRect()
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+
+      return isNoHitZone(x, y) || Math.hypot(x - cx, y - cy) < fleeDistance()
     }
 
     function fleeFrom(cursorX, cursorY) {
@@ -127,7 +132,7 @@ export default function NoButton() {
     function onBlock(e) {
       const x = e.clientX ?? e.changedTouches?.[0]?.clientX
       const y = e.clientY ?? e.changedTouches?.[0]?.clientY
-      if (x == null || y == null || !isDangerClose(x, y)) return
+      if (x == null || y == null || !isNoHitZone(x, y)) return
 
       e.preventDefault()
       e.stopPropagation()
@@ -142,6 +147,7 @@ export default function NoButton() {
     }
 
     document.addEventListener('pointermove', onPointerMove, { passive: true })
+    document.addEventListener('mousemove', onPointerMove, { passive: true })
     document.addEventListener('touchstart', onTouch, { passive: false, capture: true })
     document.addEventListener('touchmove', onTouch, { passive: false, capture: true })
     document.addEventListener('pointerdown', onBlock, true)
@@ -150,6 +156,7 @@ export default function NoButton() {
 
     return () => {
       document.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('mousemove', onPointerMove)
       document.removeEventListener('touchstart', onTouch, true)
       document.removeEventListener('touchmove', onTouch, true)
       document.removeEventListener('pointerdown', onBlock, true)
