@@ -33,6 +33,7 @@ export default function Lotus3D() {
 
     const lotus = new THREE.Group()
     lotus.rotation.x = -0.35
+    lotus.scale.setScalar(1.28)
     scene.add(lotus)
 
     scene.add(new THREE.AmbientLight(0xeaf8ff, 1.8))
