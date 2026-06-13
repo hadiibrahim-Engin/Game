@@ -1,0 +1,17 @@
+.lotus3d {
+  display: block;
+  width: 7.25rem;
+  height: 5.25rem;
+  margin: 0 auto 0.55rem;
+  filter: drop-shadow(0 14px 20px rgba(55, 139, 255, 0.24));
+  outline: none;
+  touch-action: none;
+}
+
+@media (max-width: 520px) {
+  .lotus3d {
+    width: 6.25rem;
+    height: 4.75rem;
+    margin-bottom: 0.45rem;
+  }
+}
