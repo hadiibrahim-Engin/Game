@@ -21,6 +21,7 @@ export default function Lotus3D() {
       canvas,
       alpha: true,
       antialias: true,
+      preserveDrawingBuffer: true,
       powerPreference: 'high-performance',
     })
     renderer.setClearColor(0x000000, 0)
