@@ -270,21 +270,40 @@
   setInterval(spawnHeart, 900);
   for (let i = 0; i < 6; i++) spawnHeart();
 
-  /* ── No button wiggle ── */
+  /* ── No button always dodges (impossible to catch) ── */
   const noBtn = document.getElementById('btn-no');
-  let wiggleCount = 0;
 
-  noBtn.addEventListener('mouseenter', () => {
-    if (wiggleCount >= 3) return; // after 3 teases, it stays put
-    wiggleCount++;
-    const moves = [
-      { x:  80, y: -20 },
-      { x: -70, y:  30 },
-      { x:  60, y:  40 },
-    ];
-    const pos = moves[(wiggleCount - 1) % moves.length];
-    noBtn.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
-    setTimeout(() => { noBtn.style.transform = ''; }, 600);
+  function dodge() {
+    // jump to a random safe spot within the viewport
+    const pad = 12;
+    const bw = noBtn.offsetWidth;
+    const bh = noBtn.offsetHeight;
+    const maxX = window.innerWidth  - bw - pad;
+    const maxY = window.innerHeight - bh - pad;
+    const x = pad + Math.random() * Math.max(0, maxX - pad);
+    const y = pad + Math.random() * Math.max(0, maxY - pad);
+    noBtn.style.position = 'fixed';
+    noBtn.style.left = x + 'px';
+    noBtn.style.top  = y + 'px';
+    noBtn.style.zIndex = 5;
+  }
+
+  // Run away from mouse, touch, and any attempt to focus/click it.
+  ['mouseenter', 'mouseover', 'mousedown', 'touchstart', 'pointerdown', 'focus', 'click']
+    .forEach(evt => {
+      noBtn.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dodge();
+      }, { passive: false });
+    });
+
+  // Also flee when the cursor merely gets close (desktop).
+  document.addEventListener('mousemove', (e) => {
+    const r = noBtn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (dist < 90) dodge();
   });
 
   /* ── Yes ── */
