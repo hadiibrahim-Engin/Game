@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import styles from './NoButton.module.css'
 
-const PAD = 12
-const SAFE_DIST = 130
+const PAD = 16
+const SAFE_DIST = 140
 
 export default function NoButton({ onNo }) {
   const btnRef = useRef(null)
@@ -10,7 +10,16 @@ export default function NoButton({ onNo }) {
   useEffect(() => {
     const btn = btnRef.current
 
-    function clamp(x, y) {
+    // Anchor the button as fixed at its natural position right away
+    // so it never starts un-positioned when the first flee fires.
+    const init = btn.getBoundingClientRect()
+    btn.style.width    = init.width + 'px'
+    btn.style.position = 'fixed'
+    btn.style.left     = init.left + 'px'
+    btn.style.top      = init.top  + 'px'
+    btn.style.zIndex   = '5'
+
+    function safePos(x, y) {
       const bw = btn.offsetWidth
       const bh = btn.offsetHeight
       return {
@@ -19,41 +28,44 @@ export default function NoButton({ onNo }) {
       }
     }
 
-    function moveTo(x, y) {
-      const p = clamp(x, y)
-      btn.style.position = 'fixed'
-      btn.style.left = p.x + 'px'
-      btn.style.top  = p.y + 'px'
-      btn.style.zIndex = '5'
-    }
-
-    function fleeFrom(px, py) {
-      const r  = btn.getBoundingClientRect()
-      const cx = r.left + r.width  / 2
-      const cy = r.top  + r.height / 2
-      let dx = cx - px
-      let dy = cy - py
-      const len = Math.hypot(dx, dy) || 1
-      dx /= len; dy /= len
-
-      const jump = 160 + Math.random() * 80
-      let nx = cx + dx * jump - r.width  / 2
-      let ny = cy + dy * jump - r.height / 2
-
-      const p = clamp(nx, ny)
+    function fleeFrom(cursorX, cursorY) {
       const bw = btn.offsetWidth
       const bh = btn.offsetHeight
-      const distAfter = Math.hypot(p.x + bw / 2 - px, p.y + bh / 2 - py)
-      if (distAfter < 120) {
-        p.x = px < window.innerWidth  / 2 ? window.innerWidth  - bw - PAD : PAD
-        p.y = py < window.innerHeight / 2 ? window.innerHeight - bh - PAD : PAD
-      }
-      moveTo(p.x, p.y)
+
+      // Pick the corner farthest from the cursor.
+      const corners = [
+        { x: PAD,                           y: PAD },
+        { x: window.innerWidth  - bw - PAD, y: PAD },
+        { x: PAD,                           y: window.innerHeight - bh - PAD },
+        { x: window.innerWidth  - bw - PAD, y: window.innerHeight - bh - PAD },
+      ]
+
+      // Also add mid-edge candidates for more variety.
+      const midEdges = [
+        { x: window.innerWidth / 2 - bw / 2, y: PAD },
+        { x: window.innerWidth / 2 - bw / 2, y: window.innerHeight - bh - PAD },
+        { x: PAD,                             y: window.innerHeight / 2 - bh / 2 },
+        { x: window.innerWidth  - bw - PAD,   y: window.innerHeight / 2 - bh / 2 },
+      ]
+
+      const candidates = [...corners, ...midEdges].map(p => ({
+        ...safePos(p.x, p.y),
+        dist: Math.hypot(p.x + bw / 2 - cursorX, p.y + bh / 2 - cursorY),
+      }))
+
+      // Sort by distance descending, pick one of the top 3 randomly for variety.
+      candidates.sort((a, b) => b.dist - a.dist)
+      const pick = candidates[Math.floor(Math.random() * 3)]
+
+      btn.style.left = pick.x + 'px'
+      btn.style.top  = pick.y + 'px'
     }
 
     function onMouseMove(e) {
-      const r = btn.getBoundingClientRect()
-      const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2))
+      const r    = btn.getBoundingClientRect()
+      const cx   = r.left + r.width  / 2
+      const cy   = r.top  + r.height / 2
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy)
       if (dist < SAFE_DIST) fleeFrom(e.clientX, e.clientY)
     }
 
@@ -66,23 +78,23 @@ export default function NoButton({ onNo }) {
     function onBlock(e) {
       e.preventDefault()
       const r = btn.getBoundingClientRect()
-      fleeFrom(r.left + r.width / 2, r.top + r.height / 2 + 40)
+      fleeFrom(r.left + r.width / 2, r.top + r.height / 2)
     }
 
     document.addEventListener('mousemove', onMouseMove)
-    btn.addEventListener('touchstart', onTouch,  { passive: false })
-    btn.addEventListener('mousedown',  onBlock,   { passive: false })
+    btn.addEventListener('touchstart',  onTouch,  { passive: false })
+    btn.addEventListener('mousedown',   onBlock,  { passive: false })
     btn.addEventListener('pointerdown', onBlock,  { passive: false })
-    btn.addEventListener('focus',      onBlock,   { passive: false })
-    btn.addEventListener('click',      onBlock,   { passive: false })
+    btn.addEventListener('focus',       onBlock,  { passive: false })
+    btn.addEventListener('click',       onBlock,  { passive: false })
 
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
-      btn.removeEventListener('touchstart', onTouch)
-      btn.removeEventListener('mousedown',  onBlock)
+      btn.removeEventListener('touchstart',  onTouch)
+      btn.removeEventListener('mousedown',   onBlock)
       btn.removeEventListener('pointerdown', onBlock)
-      btn.removeEventListener('focus',      onBlock)
-      btn.removeEventListener('click',      onBlock)
+      btn.removeEventListener('focus',       onBlock)
+      btn.removeEventListener('click',       onBlock)
     }
   }, [])
 
